@@ -1,0 +1,27 @@
+# Ambiente virtual
+venv/
+.env/
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Dados gerados pelo build_index.py (pode ser recriado)
+embeddings/
+
+# Arquivos temporários
+*.log
+*.tmp
+
+# Configs locais
+.DS_Store
+Thumbs.db
+
+# Streamlit cache
+.streamlit/
+
+# Arquivos de IDE
+.vscode/
+.idea/
