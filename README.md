@@ -28,11 +28,6 @@ Ative **no Prompt de Comando (cmd.exe)**:
 venv\Scripts\activate
 ```
 
-> Se usar **PowerShell**, ative com:
-```powershell
-.env\Scripts\Activate.ps1
-```
-
 ### 3) Instalar dependências
 ```bat
 pip install --upgrade pip
