@@ -1,5 +1,6 @@
 import os, glob
 import streamlit as st
+import html
 from main import load_index_and_model, search_context, generate_answer
 
 st.set_page_config(page_title="Assistente de Estudos RAG", layout="wide")
@@ -15,7 +16,7 @@ st.markdown("""
   border-radius: 16px;
   margin-bottom: 1rem;
 }
-.hero h1 { margin: 0; font-size: 1.4rem; font-weight: 700; color: #ffffff; }
+.hero h1 { margin: 0; font-size: 1.4rem; font-weight: 700; color: #ffffff !important; }
 .hero p  { margin: .35rem 0 0 0; opacity: .92; }
 
 /* Tabs com fonte mais forte */
@@ -36,6 +37,28 @@ st.markdown("""
 }
 .st-expander > details > summary {
   font-weight: 600;
+}
+
+/* Cartão custom para o nome do modelo (fonte menor e quebra de linha) */
+.metric-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+.metric-card .metric-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.metric-card .metric-value {
+  font-size: 1.05rem; /* menor que o st.metric padrão */
+  font-weight: 700;
+  line-height: 1.2;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -59,19 +82,46 @@ index, chunks, model = get_index_chunks_model()
 colA, colB, colC = st.columns(3)
 pdf_count = len(glob.glob(os.path.join("pdfs", "*.pdf")))
 chunk_count = len(chunks) if isinstance(chunks, list) else 0
-# nome do modelo (fallbacks simples)
+
+# Nome do modelo 
 model_name = None
+# 1) Se vier em dict
 if isinstance(model, dict):
     model_name = model.get("model") or model.get("name") or model.get("model_name")
-if not model_name:
-    model_name = (str(model) or "desconhecido")[:32]
+
+# 2) Se for SentenceTransformer, pega o nome do transformer base
+if model_name is None:
+    try:
+        from sentence_transformers import SentenceTransformer
+        if isinstance(model, SentenceTransformer):
+            try:
+                first = model._first_module()
+                model_name = getattr(first, "model_name", None)
+                if model_name is None:
+                    auto_model = getattr(first, "auto_model", None)
+                    config = getattr(auto_model, "config", None)
+                    if config is not None:
+                        model_name = getattr(config, "name_or_path", None)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+# 3) Fallback final
+model_name = model_name or (str(model) or "desconhecido")
 
 with colA:
     st.metric("PDFs indexados", pdf_count)
 with colB:
     st.metric("Chunks", chunk_count)
 with colC:
-    st.metric("Modelo", model_name)
+    safe_model = html.escape(model_name)
+    st.markdown(f"""
+    <div class='metric-card' title="{safe_model}">
+      <div class='metric-label'>Modelo</div>
+      <div class='metric-value'>{safe_model}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.divider()
 
@@ -104,7 +154,6 @@ with tab_ask:
 
     if submit and question.strip():
         with st.spinner("Buscando trechos relevantes..."):
-            # Mantém assinatura existente do seu backend
             ctx_list = search_context(index, chunks, question, model)
             contexto = "\n\n".join(ctx_list)
 
